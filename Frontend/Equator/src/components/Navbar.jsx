@@ -8,7 +8,7 @@ export default function Navbar() {
   const { cartCount, searchQuery, setSearchQuery } = useApi();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [ setSearchOpen] = useState(false);
+  const [ssetSearchOpen] = useState(false);
   const navigate = useNavigate();
 
 useEffect(() => {
