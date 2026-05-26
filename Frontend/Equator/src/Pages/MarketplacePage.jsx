@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FiFilter, FiSearch } from "react-icons/fi";
 import ProductCard from "../components/ProductCard";
-import { useApi } from "../context/ApiContext";
+import { useApi } from "../../context/ApiContext";
 
 export default function MarketplacePage() {
   const { getProducts, categories, searchQuery, setSearchQuery } = useApi();

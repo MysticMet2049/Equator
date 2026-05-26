@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { FiShoppingCart, FiHeart } from "react-icons/fi";
 import StarRating from "./StarRating";
-import { useApi } from "../context/ApiContext";
+import { useApi } from "../../context/ApiContext";
 
 export default function ProductCard({ product }) {
   const { addToCart, toggleWishlist, isInWishlist } = useApi();
