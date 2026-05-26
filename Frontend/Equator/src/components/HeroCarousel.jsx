@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { useApi } from "../../context/ApiContext";
+import { useApi } from "../context/ApiContext";
 
 export default function HeroCarousel() {
   const { heroSlides } = useApi();

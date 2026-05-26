@@ -3,7 +3,7 @@ import { FiArrowRight } from "react-icons/fi";
 import { PiLeaf, PiSealCheck, PiTruck } from "react-icons/pi";
 import HeroCarousel from "../components/HeroCarousel";
 import ProductCard from "../components/ProductCard";
-import { useApi } from "../../context/ApiContext";
+import { useApi } from "../context/ApiContext";
 
 // ─── Trust badges ─────────────────────────────────────────────────────────────
 const TRUST = [

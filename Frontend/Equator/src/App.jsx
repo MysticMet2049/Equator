@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ApiProvider } from "./context/ApiContext";
-import Navbar from "/components/Navbar";
-import HomePage from "/pages/HomePage";
-import MarketplacePage from "/pages/MarketplacePage";
+import Navbar from "./components/Navbar";
+import HomePage from "./pages/HomePage";
+import MarketplacePage from "./pages/MarketplacePage";
 import SearchResultsPage from "./pages/SearchResultsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import StoresPage from "./pages/StoresPage";

@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import {
-  FiShoppingCart,FiUser,FiSearch,FiMenu,FiX,} from "react-icons/fi";
-import { useApi } from "../../context/ApiContext";
+import { FiShoppingCart, FiUser, FiSearch, FiMenu, FiX } from "react-icons/fi";
+import { useApi } from "../context/ApiContext";
 
 export default function Navbar() {
   const { cartCount, searchQuery, setSearchQuery } = useApi();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [ setSearchOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery || "");
   const navigate = useNavigate();
+  const inputRef = useRef(null);
 
-useEffect(() => {
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
@@ -19,13 +19,14 @@ useEffect(() => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/marketplace?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
+    if (localSearch.trim()) {
+      setSearchQuery(localSearch.trim());
+      navigate(`/search?q=${encodeURIComponent(localSearch.trim())}`);
+      setMobileOpen(false);
     }
   };
 
- const navLinks = [
+  const navLinks = [
     { to: "/marketplace", label: "Marketplace" },
     { to: "/stores", label: "Stores" },
     { to: "/categories", label: "Categories" },
@@ -34,141 +35,88 @@ useEffect(() => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-white/95 backdrop-blur-md shadow-sm"
-          : "bg-white"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/97 backdrop-blur-md shadow-sm" : "bg-white"}`}
       style={{ borderBottom: "1px solid #e9e4dc" }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center gap-4 md:gap-6">
         {/* Logo */}
-        <Link
-          to="/"
-          className="text-xl font-semibold tracking-tight shrink-0"
-          style={{ fontFamily: "var(--font-display)", color: "var(--color-equator-text)" }}
-        >
+        <Link to="/" className="text-xl font-semibold tracking-tight shrink-0" style={{ fontFamily: "var(--font-display)", color: "var(--color-equator-text)" }}>
           Equator
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-5">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) =>
-                `nav-link text-sm font-medium pb-0.5 transition-colors ${
-                  isActive
-                    ? "active"
-                    : ""
-                }`
-              }
-              style={({ isActive }) => ({
-                color: isActive
-                  ? "var(--color-equator-green)"
-                  : "var(--color-equator-muted)",
-              })}
-            >
-    {label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-3 ml-auto">
-          {/* Search bar */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden md:flex items-center gap-2 rounded-full px-3 py-1.5 text-sm"
-            style={{
-              background: "var(--color-equator-beige)",
-              border: "1px solid #d9d3c8",
-            }}
-          >
-            <FiSearch size={14} style={{ color: "var(--color-equator-muted)" }} />
-            <input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent outline-none text-sm w-40"
-              style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}
-            />
-          </form>
-           {/* Cart */}
-          <Link
-            to="/cart"
-            className="relative p-2 rounded-full transition-colors hover:bg-stone-100"
-          >
-            <FiShoppingCart size={18} style={{ color: "var(--color-equator-text)" }} />
-            {cartCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-medium"
-                style={{ background: "var(--color-equator-green)", fontSize: "10px" }}
-              >
-                {cartCount}
-              </span>
-            )}
-          </Link>
-
-          {/* Account */}
-          <Link
-            to="/account"
-            className="p-2 rounded-full transition-colors hover:bg-stone-100"
-          >
-            <FiUser size={18} style={{ color: "var(--color-equator-text)" }} />
-          </Link>
-
-          {/* Mobile menu toggle */}
-          <button
-            className="md:hidden p-2 rounded-full transition-colors hover:bg-stone-100"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? (
-              <FiX size={18} style={{ color: "var(--color-equator-text)" }} />
-            ) : (
-              <FiMenu size={18} style={{ color: "var(--color-equator-text)" }} />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div
-          className="md:hidden px-6 pb-4 pt-2 flex flex-col gap-3"
-          style={{ borderTop: "1px solid var(--color-equator-beige)", background: "white" }}
-        >
-          {navLinks.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className="text-sm font-medium py-1"
-              style={{ color: "var(--color-equator-muted)" }}
-              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) => `nav-link text-sm font-medium pb-0.5 transition-colors ${isActive ? "active" : ""}`}
+              style={({ isActive }) => ({ color: isActive ? "var(--color-equator-green)" : "var(--color-equator-muted)" })}
             >
               {label}
             </NavLink>
           ))}
-          <form onSubmit={handleSearch} className="flex items-center gap-2 mt-1">
-            <div
-              className="flex items-center gap-2 flex-1 rounded-full px-3 py-1.5"
-              style={{ background: "var(--color-equator-beige)" }}
-            >
-              <FiSearch size={14} style={{ color: "var(--color-equator-muted)" }} />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none text-sm flex-1"
-              />
-            </div>
+        </nav>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Search bar (desktop) */}
+        <form
+          onSubmit={handleSearch}
+          className="hidden md:flex items-center gap-2 rounded-full px-3 py-1.5"
+          style={{ background: "var(--color-equator-beige)", border: "1px solid #d9d3c8", minWidth: "220px" }}
+        >
+          <FiSearch size={13} style={{ color: "var(--color-equator-muted)", flexShrink: 0 }} />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Rechercher sur Equator..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="bg-transparent outline-none text-sm w-full"
+            style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}
+          />
+          <button type="submit" className="shrink-0">
+            <FiSearch size={13} style={{ color: "var(--color-equator-green)" }} />
+          </button>
+        </form>
+
+        {/* Cart */}
+        <Link to="/cart" className="relative p-2 rounded-full transition-colors hover:bg-stone-100">
+          <FiShoppingCart size={18} style={{ color: "var(--color-equator-text)" }} />
+          {cartCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 text-white w-4 h-4 rounded-full flex items-center justify-center font-medium" style={{ background: "var(--color-equator-green)", fontSize: "9px" }}>
+              {cartCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Account */}
+        <Link to="/account" className="hidden md:block p-2 rounded-full transition-colors hover:bg-stone-100">
+          <FiUser size={18} style={{ color: "var(--color-equator-text)" }} />
+        </Link>
+
+        {/* Mobile menu toggle */}
+        <button className="md:hidden p-2 rounded-full transition-colors hover:bg-stone-100" onClick={() => setMobileOpen(!mobileOpen)}>
+          {mobileOpen ? <FiX size={18} style={{ color: "var(--color-equator-text)" }} /> : <FiMenu size={18} style={{ color: "var(--color-equator-text)" }} />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden px-4 pb-4 pt-2 flex flex-col gap-3" style={{ borderTop: "1px solid var(--color-equator-beige)", background: "white" }}>
+          {navLinks.map(({ to, label }) => (
+            <NavLink key={to} to={to} className="text-sm font-medium py-1" style={{ color: "var(--color-equator-muted)" }} onClick={() => setMobileOpen(false)}>
+              {label}
+            </NavLink>
+          ))}
+          <form onSubmit={handleSearch} className="flex items-center gap-2 rounded-full px-3 py-1.5 mt-1" style={{ background: "var(--color-equator-beige)", border: "1px solid #d9d3c8" }}>
+            <FiSearch size={13} style={{ color: "var(--color-equator-muted)" }} />
+            <input type="text" placeholder="Rechercher..." value={localSearch} onChange={(e) => setLocalSearch(e.target.value)} className="bg-transparent outline-none text-sm flex-1" style={{ fontFamily: "var(--font-body)" }} />
           </form>
         </div>
       )}
     </header>
   );
 }
-
