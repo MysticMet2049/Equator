@@ -489,6 +489,15 @@ export function ApiProvider({ children }) {
       heroSlides: HERO_SLIDES,
       categories: CATEGORIES,
       allStores: ALL_STORES,
+      // ── Backward-compat aliases used by HomePage ──
+      featuredProducts: ALL_PRODUCTS.slice(0, 4),
+      partnerStores: ALL_STORES.slice(0, 2).map(s => ({
+        id: s.id,
+        name: s.name,
+        slug: s.slug,
+        description: s.description,
+        image: s.image,
+      })),
       cart, cartCount, cartTotal,
       addToCart, removeFromCart, clearCart,
       wishlist, toggleWishlist, isInWishlist,
