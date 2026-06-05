@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   FiArrowLeft, FiShare2, FiHeart, FiPhone, FiMail,
-  FiMapPin, FiStar, FiPackage, FiCheck, FiMessageCircle,
+  FiMapPin,FiPackage, FiCheck, FiMessageCircle,
   FiChevronDown, FiChevronUp,
 } from "react-icons/fi";
 import { PiWhatsappLogo } from "react-icons/pi";
