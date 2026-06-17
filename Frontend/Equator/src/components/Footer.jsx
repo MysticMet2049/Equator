@@ -2,17 +2,22 @@ import { Link } from "react-router-dom";
 import { FiGlobe, FiMail, FiInstagram } from "react-icons/fi";
 import { useState } from "react";
 
+
+// Composant Footer réutilisable avec plusieurs variantes d'affichage
 export default function Footer({ variant = "default" }) {
   const [email, setEmail] = useState("");
-
+  // État local pour le champ newsletter
   return (
     <footer style={{ background: "var(--color-equator-cream)", borderTop: "1px solid var(--color-equator-beige)" }}>
       <div className="max-w-7xl mx-auto px-6 py-14">
+         {/* Grille principale du footer */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-          {/* Brand */}
+          
+          {/* Section marque / présentation */}
           <div className="col-span-2 md:col-span-1">
             <p className="text-xl font-semibold mb-3" style={{ fontFamily: "var(--font-display)", color: "var(--color-equator-text)" }}>
               {variant === "product" ? "Equator" : "EQUATOR"}
+                {/* Description dynamique selon la variante */}
             </p>
             <p className="text-xs leading-relaxed mb-5" style={{ color: "var(--color-equator-muted)", fontFamily: "var(--font-body)" }}>
               {variant === "stores"
@@ -21,6 +26,7 @@ export default function Footer({ variant = "default" }) {
                 ? "La destination premium pour les objets d'exception. Curés avec soin pour les connaisseurs du monde entier."
                 : "La place de marché premium pour les esprits exigeants. Découvrez une sélection curatée des meilleurs produits."}
             </p>
+            {/* Réseaux sociaux et moyens de contact */}
             <div className="flex gap-2">
               {[FiGlobe, FiInstagram, FiMail].map((Icon, i) => (
                 <a key={i} href="#" className="p-1.5 rounded-full transition-colors hover:bg-stone-100" style={{ color: "var(--color-equator-muted)" }}>
@@ -30,7 +36,7 @@ export default function Footer({ variant = "default" }) {
             </div>
           </div>
 
-          {/* Links 1 */}
+          {/* Première colonne de navigation */}
           <div>
             <p className="text-xs font-semibold mb-4 tracking-widest" style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}>
               {variant === "stores" ? "EXPLORER" : variant === "product" ? "MARKETPLACE" : "PLATEFORME"}
@@ -49,7 +55,7 @@ export default function Footer({ variant = "default" }) {
             </ul>
           </div>
 
-          {/* Links 2 */}
+          {/* Deuxième colonne de navigation */}
           <div>
             <p className="text-xs font-semibold mb-4 tracking-widest" style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}>
               {variant === "stores" ? "SOCIÉTÉ" : "SUPPORT"}
@@ -68,7 +74,7 @@ export default function Footer({ variant = "default" }) {
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* Section newsletter */}
           <div>
             <p className="text-xs font-semibold mb-4 tracking-widest" style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}>
               NEWSLETTER
@@ -76,6 +82,8 @@ export default function Footer({ variant = "default" }) {
             <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--color-equator-muted)" }}>
               Recevez nos dernières sorties et offres exclusives.
             </p>
+
+             {/* Formulaire d'inscription newsletter */}
             <div className="flex gap-1">
               <input
                 type="email"
@@ -92,6 +100,8 @@ export default function Footer({ variant = "default" }) {
                 ›
               </button>
             </div>
+
+            {/* Bloc support affiché uniquement pour la variante stores */}
             {variant === "stores" && (
               <div className="mt-6 rounded-lg p-4" style={{ background: "var(--color-equator-green-dark)" }}>
                 <p className="text-xs font-semibold text-white mb-1">Besoin d'aide ?</p>
@@ -102,14 +112,16 @@ export default function Footer({ variant = "default" }) {
         </div>
       </div>
 
-      {/* Bottom bar */}
+      {/* Barre inférieure du footer */}
       <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2" style={{ borderTop: "1px solid var(--color-equator-beige)" }}>
+        {/* Copyright */}
         <p className="text-xs" style={{ color: "var(--color-equator-muted)", fontFamily: "var(--font-body)" }}>
           © 2024 EQUATOR DIGITAL MARKETPLACE. ALL RIGHTS RESERVED.
         </p>
+        {/* Signature premium visible uniquement sur la page stores */}
         {variant === "stores" && (
           <p className="text-xs" style={{ color: "var(--color-equator-muted)", fontFamily: "var(--font-body)", letterSpacing: "0.1em" }}>
-            MADE WITH PRECISION · PARIS · NEW YORK · TOKYO
+            MADE WITH PRECISION · EQUATOR . YATA EXPERTS
           </p>
         )}
       </div>

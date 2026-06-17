@@ -1,9 +1,17 @@
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
+// Composant de pagination réutilisable.
+// current représente la page actuelle, total le nombre total de pages,
+// et onChange permet de changer de page.
+
+// Si une seule page existe, la pagination n'est pas affichée.
 export default function Pagination({ current, total, onChange }) {
   if (total <= 1) return null;
 
+  
+  // Tableau contenant les premières pages à afficher.
   const pages = [];
+  // Limite l'affichage direct aux trois premières pages.
   for (let i = 1; i <= Math.min(total, 3); i++) pages.push(i);
 
   const btn = (label, page, isActive = false, disabled = false) => (

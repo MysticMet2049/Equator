@@ -5,20 +5,29 @@ import { useApi } from "../context/ApiContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
+  // Récupère les informations globales liées au panier et à la recherche.
   const { cartCount, searchQuery, setSearchQuery } = useApi();
+  // Récupère l'état de connexion, les informations de l'utilisateur et la fonction de déconnexion.
   const { isAuthenticated, user, logout } = useAuth();
+  // Récupère l'état de connexion, les informations de l'utilisateur et la fonction de déconnexion.
   const [scrolled, setScrolled] = useState(false);
+  // Contrôle l'ouverture et la fermeture du menu mobile.
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Stocke temporairement la recherche saisie par l'utilisateur avant validation.
   const [localSearch, setLocalSearch] = useState(searchQuery || "");
+  // Contrôle l'affichage du menu déroulant de l'utilisateur connecté.
   const [userMenu, setUserMenu] = useState(false);
+  // Permet de rediriger l'utilisateur vers une autre page après une action.
   const navigate = useNavigate();
 
+  // Surveille le scroll de la page pour appliquer un style différent à la navbar.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
+  
+  // Gère la soumission du formulaire de recherche et redirige vers la page des résultats.
   const handleSearch = (e) => {
     e.preventDefault();
     if (localSearch.trim()) {
@@ -27,7 +36,7 @@ export default function Navbar() {
       setMobileOpen(false);
     }
   };
-
+  // Liste des liens principaux affichés dans la navigation.
   const navLinks = [
     { to: "/marketplace", label: "Marketplace" },
     { to: "/stores",      label: "Stores" },
@@ -40,13 +49,13 @@ export default function Navbar() {
       style={{ borderBottom: "1px solid #e9e4dc" }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center gap-4 md:gap-6">
-        {/* Logo */}
+        {/* Logo de la plateforme */}
         <Link to="/" className="text-xl font-semibold tracking-tight shrink-0"
           style={{ fontFamily: "var(--font-display)", color: "var(--color-equator-text)" }}>
           Equator
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Navigation principale sur ordinateur */}
         <nav className="hidden md:flex items-center gap-5">
           {navLinks.map(({ to, label }) => (
             <NavLink key={to} to={to}
@@ -59,7 +68,7 @@ export default function Navbar() {
 
         <div className="flex-1" />
 
-        {/* Search */}
+        {/* Barre de recherche sur ordinateur */}
         <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2 rounded-full px-3 py-1.5"
           style={{ background: "var(--color-equator-beige)", border: "1px solid #d9d3c8", minWidth: "220px" }}>
           <FiSearch size={13} style={{ color: "var(--color-equator-muted)", flexShrink: 0 }} />
@@ -69,9 +78,10 @@ export default function Navbar() {
             style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }} />
         </form>
 
-        {/* Cart */}
+        {/* Icône du panier avec le nombre d'articles */}
         <Link to="/cart" className="relative p-2 rounded-full transition-colors hover:bg-stone-100">
           <FiShoppingCart size={18} style={{ color: "var(--color-equator-text)" }} />
+          {/* Affiche le badge du panier uniquement s'il contient au moins un article. */}
           {cartCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 text-white w-4 h-4 rounded-full flex items-center justify-center font-medium"
               style={{ background: "var(--color-equator-green)", fontSize: "9px" }}>
@@ -80,8 +90,9 @@ export default function Navbar() {
           )}
         </Link>
 
-        {/* User — desktop */}
+        {/* Menu utilisateur sur ordinateur */}
         <div className="hidden md:block relative">
+          {/* Affiche le menu utilisateur si l'utilisateur est connecté, sinon l'icône de connexion. */}
           {isAuthenticated ? (
             <>
               <button
@@ -93,6 +104,7 @@ export default function Navbar() {
                   {user?.name?.charAt(0) || "U"}
                 </div>
               </button>
+              {/* Menu déroulant contenant les raccourcis du compte utilisateur. */}
               {userMenu && (
                 <div className="absolute right-0 top-full mt-2 rounded-xl overflow-hidden w-48 z-50"
                   style={{ background: "white", boxShadow: "0 8px 30px rgba(0,0,0,0.12)", border: "1px solid var(--color-equator-beige)" }}>
@@ -111,6 +123,7 @@ export default function Navbar() {
                       <Icon size={13} /> {label}
                     </Link>
                   ))}
+                  {/* Déconnecte l'utilisateur, ferme le menu et le redirige vers l'accueil. */}
                   <button onClick={() => { logout(); setUserMenu(false); navigate("/"); }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-red-50"
                     style={{ color: "#dc2626", fontFamily: "var(--font-body)", borderTop: "1px solid var(--color-equator-beige)" }}>
@@ -126,13 +139,14 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile toggle */}
+        {/* Bouton d'ouverture et de fermeture du menu mobile */}
         <button className="md:hidden p-2 rounded-full transition-colors hover:bg-stone-100" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <FiX size={18} style={{ color: "var(--color-equator-text)" }} /> : <FiMenu size={18} style={{ color: "var(--color-equator-text)" }} />}
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/* Menu de navigation mobile */}
+      {/* Affiche le menu mobile uniquement lorsqu'il est ouvert. */}
       {mobileOpen && (
         <div className="md:hidden px-4 pb-4 pt-2 flex flex-col gap-3"
           style={{ borderTop: "1px solid var(--color-equator-beige)", background: "white" }}>
@@ -149,6 +163,7 @@ export default function Navbar() {
               onChange={(e) => setLocalSearch(e.target.value)} className="bg-transparent outline-none text-sm flex-1"
               style={{ fontFamily: "var(--font-body)" }} />
           </form>
+           {/* Sur mobile, affiche le bouton de déconnexion si l'utilisateur est connecté. */}
           <div className="flex gap-2 pt-1">
             {isAuthenticated ? (
               <button onClick={() => { logout(); setMobileOpen(false); navigate("/"); }}
@@ -157,11 +172,13 @@ export default function Navbar() {
               </button>
             ) : (
               <>
+              {/* Lien vers la page de connexion pour les visiteurs non connectés. */}
                 <Link to="/login" onClick={() => setMobileOpen(false)}
                   className="flex-1 text-center text-xs py-2 rounded-lg font-medium text-white"
                   style={{ background: "var(--color-equator-green)" }}>
                   Se connecter
                 </Link>
+              {/* Lien vers la page d'inscription pour créer un nouveau compte.*/}
                 <Link to="/register" onClick={() => setMobileOpen(false)}
                   className="flex-1 text-center text-xs py-2 rounded-lg font-medium"
                   style={{ border: "1px solid var(--color-equator-beige)", color: "var(--color-equator-text)" }}>
