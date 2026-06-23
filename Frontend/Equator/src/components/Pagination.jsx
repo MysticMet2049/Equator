@@ -14,7 +14,10 @@ export default function Pagination({ current, total, onChange }) {
   // Limite l'affichage direct aux trois premières pages.
   for (let i = 1; i <= Math.min(total, 3); i++) pages.push(i);
 
+  // Fonction utilitaire qui génère un bouton de pagination.
   const btn = (label, page, isActive = false, disabled = false) => (
+
+    // Bouton représentant une page précise.
     <button
       key={label}
       onClick={() => !disabled && onChange(page)}
@@ -33,7 +36,9 @@ export default function Pagination({ current, total, onChange }) {
     </button>
   );
 
+  // Affichage principal de la pagination.
   return (
+    // Conteneur des boutons de pagination.
     <div className="flex items-center justify-center gap-1 mt-10">
       <button
         onClick={() => current > 1 && onChange(current - 1)}
