@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiTrash2, FiMinus, FiPlus, FiShield, FiShoppingBag } from "react-icons/fi";
-import { useApi } from "../context/ApiContext";
+import { useCart } from "../hooks/useCart";
 import { useAuth } from "../context/AuthContext";
-import ProductCard from "../components/ProductCard";
-import Footer from "../components/Footer";
+import Footer from "../components/layout/Footer";
 
 const RECOMMENDED = [
   { id: 101, name: "Étui en cuir Premium", store: "Accessoires", price: 45, image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80", category: "Mode" },
@@ -15,34 +14,56 @@ const RECOMMENDED = [
 ];
 
 export default function CartPage() {
-  const { cart, removeFromCart, addToCart, clearCart } = useApi();
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const {
+  cartItems,
+  cartCount,
+  cartTotal,
+  removeFromCart,
+  updateQuantity,
+  loading,
+  error,
+} = useCart();
 
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoError, setPromoError] = useState(null);
+const { isAuthenticated } = useAuth();
+const navigate = useNavigate();
 
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const discount = promoApplied ? subtotal * 0.1 : 0;
-  const total = subtotal - discount;
+const [promoCode, setPromoCode] = useState("");
+const [promoApplied, setPromoApplied] = useState(false);
+const [promoError, setPromoError] = useState(null);
 
-  const updateQty = (item, delta) => {
-    if (item.qty + delta <= 0) { removeFromCart(item.id); return; }
-    addToCart(item, delta);
+const cart = cartItems.map((item) => {
+  const product = item.product || {};
+
+  return {
+    id: item.id,
+    productId: item.productId,
+    name: product.name || item.name || "Produit",
+    store: product.storeName || product.store || "",
+    image: product.image || item.image,
+    price: item.price || product.price || 0,
+    qty: item.quantity || 1,
   };
+});
 
-  const applyPromo = () => {
-    if (promoCode.toUpperCase() === "EQUATOR10") {
-      setPromoApplied(true);
-      setPromoError(null);
-    } else {
-      setPromoError("Code invalide.");
-      setPromoApplied(false);
-    }
-  };
+const subtotal = cartTotal || cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+const discount = promoApplied ? subtotal * 0.1 : 0;
+const total = subtotal - discount;
 
-  if (cart.length === 0) {
+const updateQty = async (item, delta) => {
+  await updateQuantity(item.id, item.qty + delta);
+};
+
+const applyPromo = () => {
+  if (promoCode.toUpperCase() === "EQUATOR10") {
+    setPromoApplied(true);
+    setPromoError(null);
+  } else {
+    setPromoError("Code invalide.");
+    setPromoApplied(false);
+  }
+};
+
+  if (!loading && cartCount === 0) {
     return (
       <div className="min-h-screen pt-14 flex flex-col" style={{ background: "var(--color-equator-cream)" }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-6 py-20 px-6">
@@ -83,6 +104,14 @@ export default function CartPage() {
         <h1 className="text-2xl font-light mb-8" style={{ fontFamily: "var(--font-display)", color: "var(--color-equator-text)" }}>
           Mon Panier
         </h1>
+           {error && (
+        <p
+          className="text-sm mb-4"
+          style={{ color: "#dc2626", fontFamily: "var(--font-body)" }}
+        >
+          {error}
+        </p>
+      )}
 
         {!isAuthenticated && (
           <div className="mb-6 p-4 rounded-xl flex items-center justify-between flex-wrap gap-3" style={{ background: "#e8f5ee", border: "1px solid #a7f3d0" }}>
@@ -111,7 +140,7 @@ export default function CartPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <Link to={`/product/${item.id}`}>
+                     <Link to={`/product/${item.productId}`}>
                         <p className="text-sm font-semibold leading-snug" style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}>
                           {item.name}
                         </p>
