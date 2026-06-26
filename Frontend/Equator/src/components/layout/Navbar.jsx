@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { FiShoppingCart, FiUser, FiSearch, FiMenu, FiX, FiLogOut, FiPackage } from "react-icons/fi";
-import { useApi } from "../context/ApiContext";
-import { useAuth } from "../context/AuthContext";
+import { useApi } from "../../context/ApiContext";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../hooks/useCart";
 
 export default function Navbar() {
   // Récupère les informations globales liées au panier et à la recherche.
-  const { cartCount, searchQuery, setSearchQuery } = useApi();
+ const { searchQuery, setSearchQuery } = useApi();
+const { cartCount } = useCart();
   // Récupère l'état de connexion, les informations de l'utilisateur et la fonction de déconnexion.
+
   const { isAuthenticated, user, logout } = useAuth();
   // Récupère l'état de connexion, les informations de l'utilisateur et la fonction de déconnexion.
   const [scrolled, setScrolled] = useState(false);

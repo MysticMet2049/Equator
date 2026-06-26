@@ -5,7 +5,7 @@
  * stay focused on a single entity each, without duplicating helpers.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://localhost:8443";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://www.wylov.com:8081";
 
 // ─── Asset URL helper ─────────────────────────────────────────────────────────
 /**

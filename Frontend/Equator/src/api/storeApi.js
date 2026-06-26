@@ -73,11 +73,58 @@ export async function searchAllStores(params = {}) {
  * @param {string} query
  * @param {object} extraParams
  */
+function normalizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function storeMatchesQuery(store, query) {
+  const search = normalizeSearchText(query);
+
+  if (!search) return true;
+
+  const text = normalizeSearchText(
+    [
+      store.name,
+      store.storeName,
+      store.description,
+      store.tagline,
+      store.category,
+      store.location,
+      store.address,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return text.includes(search);
+}
+
 export async function fullTextSearchStores(query, extraParams = {}) {
-  const body = buildSearchQuery({ searchString: query, ...extraParams });
-  const response = await http.post("/api/client/stores/full-text-search", body);
-  const normalized = normalizePaginatedResponse(response, extraParams.pageSize);
-  return { ...normalized, items: normalized.items.map(mapStoreFromApi) };
+  const page = Number(extraParams.page || 0);
+  const pageSize = Number(extraParams.pageSize || 12);
+
+  const response = await getAllStores({
+    pageSize: 100,
+  });
+
+  const allStores = response.items || [];
+
+  const filteredStores = allStores.filter((store) =>
+    storeMatchesQuery(store, query)
+  );
+
+  const start = page * pageSize;
+  const end = start + pageSize;
+
+  return {
+    items: filteredStores.slice(start, end),
+    totalItems: filteredStores.length,
+    totalPages: Math.max(1, Math.ceil(filteredStores.length / pageSize)),
+    page,
+  };
 }
 
 /**

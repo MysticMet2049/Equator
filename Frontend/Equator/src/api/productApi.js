@@ -62,12 +62,11 @@ export async function getAllProducts(params = {}) {
  * @param {object} extraParams
  */
 export async function fullTextSearchProducts(query, extraParams = {}) {
-  const body = buildSearchQuery({ searchString: query, ...extraParams });
-  const response = await http.post("/api/client/catalog/products/full-text-search", body);
-  const normalized = normalizePaginatedResponse(response, extraParams.pageSize);
-  return { ...normalized, items: normalized.items.map(mapProductFromApi) };
+  return searchProducts({
+    ...extraParams,
+    searchString: query,
+  });
 }
-
 /**
  * Retrieve products belonging to a specific store.
  * Used by StoreDetailPage.

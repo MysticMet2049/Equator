@@ -1,0 +1,85 @@
+import AuthFormField from "./AuthFormField";
+
+export default function RegisterForm({
+  form,
+  setForm,
+  errors,
+  showPassword,
+  onTogglePassword,
+  onSubmit,
+  loading,
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-5">
+      <AuthFormField
+        label="NOM D'UTILISATEUR"
+        name="username"
+        value={form.username}
+        onChange={(event) => setForm((previous) => ({ ...previous, username: event.target.value }))}
+        placeholder="votre_username"
+        error={errors.registerUsername}
+        autoComplete="username"
+      />
+
+      <AuthFormField
+        label="ADRESSE EMAIL"
+        name="email"
+        value={form.email}
+        onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
+        type="email"
+        placeholder="jean.dupont@exemple.com"
+        error={errors.email}
+        autoComplete="email"
+      />
+
+      <AuthFormField
+        label="NUMÉRO DE TÉLÉPHONE"
+        name="mobileNumber"
+        value={form.mobileNumber}
+        onChange={(event) => setForm((previous) => ({ ...previous, mobileNumber: event.target.value }))}
+        type="tel"
+        placeholder="Ex : 699000000"
+        error={errors.mobileNumber}
+        autoComplete="tel"
+      />
+
+      <AuthFormField
+        label="MOT DE PASSE"
+        name="password"
+        value={form.password}
+        onChange={(event) => setForm((previous) => ({ ...previous, password: event.target.value }))}
+        placeholder="••••••••"
+        error={errors.registerPassword}
+        withPasswordToggle
+        showPassword={showPassword}
+        onTogglePassword={onTogglePassword}
+        autoComplete="new-password"
+      />
+
+      <AuthFormField
+        label="CONFIRMER LE MOT DE PASSE"
+        name="confirmPassword"
+        value={form.confirmPassword}
+        onChange={(event) => setForm((previous) => ({ ...previous, confirmPassword: event.target.value }))}
+        placeholder="••••••••"
+        error={errors.confirmPassword}
+        withPasswordToggle
+        showPassword={showPassword}
+        onTogglePassword={onTogglePassword}
+        autoComplete="new-password"
+      />
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all"
+        style={{
+          background: loading ? "#6b9e84" : "var(--color-equator-green)",
+          fontFamily: "var(--font-body)",
+        }}
+      >
+        {loading ? "Création..." : "Créer mon compte →"}
+      </button>
+    </form>
+  );
+}

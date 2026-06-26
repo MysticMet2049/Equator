@@ -1,49 +1,138 @@
-/**
- * storeMapper.js
- * Transforms store-related backend DTOs into clean frontend objects.
- */
+function normalizeId(value) {
+  return value === undefined || value === null || value === "" ? null : value;
+}
 
-import { assetUrl, slugify } from "./shared";
+function formatAddress(address) {
+  if (!address) return null;
 
-// ─── Store ────────────────────────────────────────────────────────────────────
-/**
- * Map ClientStoreHeaderInfoSummaryDto → clean store object.
- *
- * Backend shape:
- *   id, ratingInfo: { averageRating, ratingCount },
- *   storeHeaderInfoSummaryDto: {
- *     id, name, currencyName, assetId, logoId,
- *     openingOur, closingOur, email, address, topStore, headStore
- *   }
- */
+  if (typeof address === "string") return address;
+
+  if (typeof address === "object") {
+    const quarterName =
+      address.quarter?.name ||
+      address.quarter?.label ||
+      null;
+
+    const phone =
+      address.principalPhoneNumber?.number ||
+      address.principalPhoneNumber?.fullNumber ||
+      null;
+
+    const parts = [
+      address.title,
+      address.street,
+      address.name,
+      quarterName,
+      address.countryName,
+      phone,
+    ].filter(Boolean);
+
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+
+  return null;
+}
+
 export function mapStoreFromApi(apiStore) {
   if (!apiStore) return null;
-  const header = apiStore.storeHeaderInfoSummaryDto ?? {};
-  const rating = apiStore.ratingInfo ?? {};
-  const address = header.address ?? {};
+
+  const header =
+    apiStore.storeHeaderInfoSummaryDto ||
+    apiStore.storeHeaderInfo ||
+    apiStore.store ||
+    apiStore;
+
+  const ratingInfo = apiStore.ratingInfo || {};
+
+  const storeId = normalizeId(header.id || apiStore.storeId || apiStore.id);
+
+  const name = header.name || apiStore.name || apiStore.storeName || "Boutique";
+
+  const assetId = normalizeId(header.assetId || apiStore.assetId);
+  const logoId = normalizeId(header.logoId || apiStore.logoId);
+
+  const rating = Number(
+    ratingInfo.averageRating ??
+      apiStore.averageRating ??
+      apiStore.rating ??
+      0
+  );
+
+  const reviewCount = Number(
+    ratingInfo.ratingCount ??
+      apiStore.ratingCount ??
+      apiStore.reviewCount ??
+      0
+  );
+
+  const address = header.address || apiStore.address || null;
 
   return {
-    id: apiStore.id ?? header.id,
-    name: header.name ?? "",
-    slug: slugify(header.name ?? String(apiStore.id ?? "")),
-    image: assetUrl(header.assetId),
-    logo: assetUrl(header.logoId),
-    rating: rating.averageRating ?? 0,
-    reviewCount: rating.ratingCount ?? 0,
-    email: header.email ?? null,
-    currency: header.currencyName ?? "EUR",
-    openingHour: header.openingOur ?? null,
-    closingHour: header.closingOur ?? null,
-    isTopStore: header.topStore ?? false,
-    isHeadStore: header.headStore ?? false,
-    location: [address.city, address.country].filter(Boolean).join(", ") || null,
-    address: {
-      street: address.street ?? "",
-      city: address.city ?? "",
-      country: address.country ?? "",
-      postalCode: address.postalCode ?? "",
-    },
-    // Keep raw for detail pages
+    ...apiStore,
+
+    id: storeId,
+    storeId,
+
+    name,
+    storeName: name,
+
+    description:
+      apiStore.description ||
+      header.description ||
+      "Boutique partenaire sur Equator Marketplace.",
+
+    tagline:
+      apiStore.tagline ||
+      apiStore.description ||
+      "Boutique partenaire sur Equator Marketplace.",
+
+    email: header.email || apiStore.email || null,
+
+    location:
+      formatAddress(address) ||
+      apiStore.location ||
+      "Localisation non renseignée",
+
+    address,
+
+    rating,
+    averageRating: rating,
+    reviewCount,
+    ratingCount: reviewCount,
+
+    isTopStore: Boolean(header.topStore || apiStore.isTopStore),
+    isHeadStore: Boolean(header.headStore || apiStore.isHeadStore),
+
+    visibleCatalog: Boolean(header.visibleCatalog),
+    enablePriceDisplayOnMarketPlace: Boolean(
+      header.enablePriceDisplayOnMarketPlace
+    ),
+
+    assetId,
+    imageAssetId: assetId,
+
+    coverAssetId: assetId,
+    bannerAssetId: assetId,
+
+    logoId,
+    logoAssetId: logoId,
+
+    imageRefType: "STORE",
+    imageRefEntityId: storeId,
+    imageType: "STORE_BANNER_IMAGE",
+
+    logoRefType: "STORE",
+    logoRefEntityId: storeId,
+    logoType: "STORE_LOGO",
+
+    userPreferenceSummaryDto: apiStore.userPreferenceSummaryDto || null,
+
+    image: null,
+    logo: null,
+    cover: null,
+    coverImage: null,
+    banner: null,
+
     _raw: apiStore,
   };
 }

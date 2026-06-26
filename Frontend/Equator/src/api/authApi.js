@@ -1,205 +1,284 @@
-/**
-
-* authApi.js
-* Services d’authentification et de gestion de compte.
-*
-* Couvre :
-* POST /api/auth/login
-* GET  /api/auth/verify-token
-* POST /api/auth/activate-auth
-* POST /api/auth/verify-code
-* POST /api/auth/verify-twofactor
-* POST /api/auth/resend-twofactor-code
-* POST /api/accounts/register
-* GET  /api/accounts/get-account
-* POST /api/accounts/save-account
-* POST /api/accounts/change-password
-* POST /api/accounts/reset-password/init
-* POST /api/accounts/reset-password/send-code
-* POST /api/accounts/reset-password/enter-password
-* POST /api/accounts/reset-password/finish
-  */
-
 import http from "./httpClient";
 
-// ─── Constantes de statut d’authentification (retournées par login) ───────────
-export const AUTH_STATUS = {
-  AUTHENTICATED: "AUTHENTICATED",
-  TWO_FACTOR_REQUIRED: "TWO_FACTOR_REQUIRED",
-  ACTIVATION_REQUIRED: "ACTIVATION_REQUIRED",
+export const LOGIN_METHOD = {
+  NATIVE: "NATIVE",
+  FACEBOOK: "FACEBOOK",
+  GOOGLE: "GOOGLE",
+  API_KEY: "API_KEY",
 };
 
-// ─── Connexion ────────────────────────────────────────────────────────────────
-/**
- * Authentifie l’utilisateur avec son login + mot de passe.
- * @returns {Promise<{ token: string, authStatus: string, user: object }>}
- */
-export async function login({ login, password, rememberMe = false }) {
-  return http.post("/api/auth/login", {
-    login,
-    password,
-    rememberMe,
-    loginMethod: "LOGIN",
-  });
+export const PLATFORM_CONTEXT = {
+  CLIENT: "WYLOV_CLIENT",
+};
+
+export const AUTH_STATUS = {
+  COMPLETE: "COMPLETE",
+  INCOMPLETE: "INCOMPLETE",
+
+  AUTHENTICATED: "COMPLETE",
+  TWO_FACTOR_REQUIRED: "INCOMPLETE",
+  ACTIVATION_REQUIRED: "INCOMPLETE",
+};
+
+function cleanObject(value) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined)
+  );
 }
 
-// ─── Vérification du token ────────────────────────────────────────────────────
+function normalizeAuthResponse(response) {
+  if (!response) {
+    return {
+      token: null,
+      authStatus: AUTH_STATUS.INCOMPLETE,
+      user: null,
+      raw: response,
+    };
+  }
+
+  return {
+    ...response,
+    token: response.token || response.accessToken || null,
+    authStatus:
+      response.authStatus ||
+      (response.token || response.accessToken
+        ? AUTH_STATUS.COMPLETE
+        : AUTH_STATUS.INCOMPLETE),
+    user: response.user || response.userSummaryDto || null,
+    raw: response,
+  };
+}
+
 /**
- * Vérifie si le token stocké est toujours valide.
- * Retourne 200 s’il est valide, lance une ApiError 401 s’il a expiré.
+ * Connexion utilisateur.
+ */
+export async function login(credentials = {}) {
+  const loginValue =
+    credentials.login ||
+    credentials.username ||
+    credentials.email ||
+    "";
+
+  const body = cleanObject({
+    login: loginValue,
+    password: credentials.password || "",
+    rememberMe: credentials.rememberMe ?? true,
+    loginMethod: LOGIN_METHOD.NATIVE,
+    thirdPartyOAuthToken: credentials.thirdPartyOAuthToken,
+  });
+
+  const response = await http.post("/api/auth/login", body);
+  return normalizeAuthResponse(response);
+}
+
+/**
+ * Vérifie si le token actuel est valide.
  */
 export async function verifyToken() {
-  return http.get("/api/auth/verify-token");
-}
+  const validResponse = await http.get("/api/auth/verify-token");
 
-// ─── Two-factor authentication ────────────────────────────────────────────────
-/**
- * Verify the SMS/OTP code sent after login.
- * @param {{ login: string, code: string, rememberMe?: boolean }} payload
- */
-export async function verifyTwoFactor({ login, code, rememberMe = false }) {
-  return http.post("/api/auth/verify-twofactor", { login, code, rememberMe });
-}
+  let user = null;
 
-/**
- * Resend the two-factor OTP code.
- * @param {{ login: string }} payload
- */
-export async function resendTwoFactorCode({ login }) {
-  return http.post("/api/auth/resend-twofactor-code", { login });
-}
+  try {
+    const accountResponse = await http.get("/api/accounts/authenticated");
 
-// ─── Account activation ───────────────────────────────────────────────────────
-/**
- * Activate a newly registered account using the activation code.
- * @param {{ login: string, code: string }} payload
- */
-export async function activateAuth({ login, code }) {
-  return http.post("/api/auth/activate-auth", { login, code });
+    if (accountResponse && typeof accountResponse === "object") {
+      user = accountResponse.user || accountResponse;
+    }
+  } catch {
+    user = null;
+  }
+
+  return {
+    valid:
+      validResponse === true ||
+      validResponse?.valid === true ||
+      validResponse?.authenticated === true ||
+      validResponse !== false,
+    user,
+    raw: validResponse,
+  };
 }
 
 /**
- * Verify an activation code (used separately from activateAuth).
- * @param {{ login: string, code: string }} payload
+ * Création d'un compte client.
+ *
+ * Champs attendus depuis LoginPage/AuthContext :
+ * {
+ *   username,
+ *   email,
+ *   mobileNumber,
+ *   password
+ * }
  */
-export async function verifyCode({ login, code }) {
-  return http.post("/api/auth/verify-code", { login, code });
+
+function normalizeMobileNumber(value) {
+  const raw = String(value || "").trim();
+
+  if (!raw) return "";
+
+  if (raw.startsWith("+")) {
+    return "+" + raw.slice(1).replace(/\D/g, "");
+  }
+
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits.startsWith("00")) {
+    return `+${digits.slice(2)}`;
+  }
+
+  if (digits.startsWith("237")) {
+    return `+${digits}`;
+  }
+
+  if (digits.length === 9 && digits.startsWith("6")) {
+    return `+237${digits}`;
+  }
+
+  return `+${digits}`;
 }
 
-// ─── Account registration ─────────────────────────────────────────────────────
-/**
- * Register a new user.
- * @param {{ login: string, password: string, mobileNumber: string, countryId: number, personalInfo: object }} payload
- */
-export async function register({
-  login,
-  password,
-  mobileNumber,
-  countryId = 1,
-  personalInfo = {},
-  platformContext = import.meta.env.VITE_PLATFORM_CONTEXT ?? "",
-}) {
-  return http.post("/api/accounts/register", {
-    login,
-    password,
+export async function register(payload = {}) {
+  const username = String(payload.username || payload.login || "").trim();
+  const email = String(payload.email || "").trim();
+  const mobileNumber = normalizeMobileNumber(payload.mobileNumber);
+  const password = String(payload.password || "");
+
+  const personalInfo = {
+    firstName: username,
+    lastName: username,
+    fullName: username,
+    email,
+  };
+
+  const body = {
     mobileNumber,
-    countryId,
-    platformContext,
-    loginMethod: "LOGIN",
     personalInfo,
-  });
-}
+    user: {
+      login: username,
+      password,
+      loginMethod: LOGIN_METHOD.NATIVE,
+      platformContext: PLATFORM_CONTEXT.CLIENT,
+      personalInfo,
+      language: "FRENCH",
+      countryShortName: "CM",
+      mobileNumber,
+    },
+    activationCodeDoesNotNeedToBeSent: false,
+  };
 
-// ─── Current account ──────────────────────────────────────────────────────────
-/**
- * Get the currently authenticated user account.
- * @returns {Promise<object>} UserSummaryDto
- */
-export async function getCurrentAccount() {
-  return http.get("/api/accounts/get-account");
-}
+  console.log(
+    "[/api/customers/create PAYLOAD]",
+    JSON.stringify(
+      {
+        ...body,
+        user: {
+          ...body.user,
+          password: "***",
+        },
+      },
+      null,
+      2
+    )
+  );
 
-/**
- * Save / update account information.
- * @param {object} accountData
- */
-export async function saveAccount(accountData) {
-  return http.post("/api/accounts/save-account", accountData);
-}
-
-/**
- * Change the current user's password.
- * @param {{ currentPassword: string, newPassword: string }} payload
- */
-export async function changePassword({ currentPassword, newPassword }) {
-  return http.post("/api/accounts/change-password", {
-    currentPassword,
-    newPassword,
-  });
-}
-
-// ─── Password reset flow ──────────────────────────────────────────────────────
-/**
- * Step 1 — Initiate password reset (send reset link / OTP).
- * @param {{ login: string }} payload
- */
-export async function resetPasswordInit({ login }) {
-  return http.post("/api/accounts/reset-password/init", { login });
+  return http.post("/api/customers/create", body, { skipAuth: true });
 }
 
 
 /**
- * Étape 2 — Envoyer le code OTP.
- * @param {{ login: string }} payload
+ * Activation du compte après réception du code.
  */
+export async function activateAuth(payload = {}) {
+  const body = {
+    login: payload.login || payload.username || payload.email || "",
+    code: payload.code || "",
+  };
 
-
-export async function resetPasswordSendCode({ login }) {
-  return http.post("/api/accounts/reset-password/send-code", { login });
+  const response = await http.post("/api/auth/activate-auth", body);
+  return normalizeAuthResponse(response);
 }
 
-
 /**
- * Étape 3 — Saisir le nouveau mot de passe avec le code reçu.
- * @param {{ login: string, code: string, newPassword: string }} payload
+ * Vérification d'un code simple.
  */
+export async function verifyCode(payload = {}) {
+  const body = {
+    login: payload.login || payload.username || payload.email || "",
+    code: payload.code || "",
+    rememberMe: payload.rememberMe ?? true,
+  };
 
-
-export async function resetPasswordEnterPassword({ login, code, newPassword }) {
-  return http.post("/api/accounts/reset-password/enter-password", {
-    login,
-    code,
-    newPassword,
-  });
+  const response = await http.post("/api/auth/verify-code", body);
+  return normalizeAuthResponse(response);
 }
 
+/**
+ * Vérification two-factor.
+ */
+export async function verifyTwoFactor(payload = {}) {
+  const body = {
+    login: payload.login || payload.username || payload.email || "",
+    code: payload.code || "",
+    rememberMe: payload.rememberMe ?? true,
+  };
+
+  const response = await http.post("/api/auth/verify-twofactor", body);
+  return normalizeAuthResponse(response);
+}
 
 /**
- * Étape 4 — Finaliser la réinitialisation.
- * @param {object} payload
+ * Renvoi du code two-factor.
  */
+export async function resendTwoFactorCode(payload = {}) {
+  const loginValue =
+    typeof payload === "string"
+      ? payload
+      : payload.login || payload.username || payload.email || "";
 
+  return http.post("/api/auth/resend-twofactor-code", loginValue);
+}
 
-export async function resetPasswordFinish(payload) {
+/**
+ * Demande de reset password par login/email.
+ */
+export async function requestPasswordReset(loginValue) {
+  return http.post("/api/accounts/reset-password/init", loginValue);
+}
+
+/**
+ * Demande de reset password avec code.
+ */
+export async function requestPasswordResetWithCode(loginValue) {
+  return http.post("/api/accounts/reset-password/send-code", loginValue);
+}
+
+/**
+ * Finalisation reset password.
+ */
+export async function finishPasswordReset(payload = {}) {
   return http.post("/api/accounts/reset-password/finish", payload);
+}
+
+/**
+ * Changement de mot de passe utilisateur connecté.
+ */
+export async function changePassword(payload = {}) {
+  return http.post("/api/accounts/change-password", payload);
 }
 
 const authApi = {
   login,
   verifyToken,
-  verifyTwoFactor,
-  resendTwoFactorCode,
+  register,
   activateAuth,
   verifyCode,
-  register,
-  getCurrentAccount,
-  saveAccount,
+  verifyTwoFactor,
+  resendTwoFactorCode,
+  requestPasswordReset,
+  requestPasswordResetWithCode,
+  finishPasswordReset,
   changePassword,
-  resetPasswordInit,
-  resetPasswordSendCode,
-  resetPasswordEnterPassword,
-  resetPasswordFinish,
-  AUTH_STATUS,
 };
 
 export default authApi;

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FiMail } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
-import Footer from "../components/Footer";
+import Footer from "../components/layout/Footer";
 
 export default function VerifyEmailPage() {
   const { verifyEmail, authLoading } = useAuth();

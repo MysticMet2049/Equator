@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import AuthModal from "./AuthModal";
+import useRequireAuthAction from "./useRequireAuthAction";
 
 export default function RequireAuthButton({
   children,
@@ -12,31 +11,15 @@ export default function RequireAuthButton({
   disabled = false,
   ...props
 }) {
-  const { isAuthenticated } = useAuth();
-  const [showModal, setShowModal] = useState(false);
-
-  const handleClick = (e) => {
-    if (disabled) return;
-    if (!isAuthenticated) {
-      setShowModal(true);
-      return;
-    }
-    onClick?.(e);
-  };
+  const { showModal, setShowModal, handleClick } = useRequireAuthAction({ disabled, onClick });
 
   return (
     <>
-      <Tag
-        className={className}
-        style={style}
-        onClick={handleClick}
-        {...props}
-      >
+      <Tag className={className} style={style} onClick={handleClick} {...props}>
         {children}
       </Tag>
-      {showModal && (
-        <AuthModal message={message} onClose={() => setShowModal(false)} />
-      )}
+
+      {showModal && <AuthModal message={message} onClose={() => setShowModal(false)} />}
     </>
   );
 }

@@ -2,18 +2,15 @@
  * httpClient.js
  * Centralized HTTP client for all API calls.
  *
- * Reads from environment variables:
- *   VITE_API_BASE_URL      — backend base URL (e.g. https://localhost:8443)
- *   VITE_API_KEY           — x-api-key header value
- *   VITE_PLATFORM_CONTEXT  — PlatformContext header value
- *
- * Auth token is stored in localStorage under the key "equator_token"
- * and injected automatically into every request.
+ * In development, BASE_URL is empty so Vite proxy handles /api requests.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://localhost:8443";
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
-const PLATFORM_CONTEXT = import.meta.env.VITE_PLATFORM_CONTEXT ?? "";
+const BASE_URL = import.meta.env.DEV
+  ? ""
+  : import.meta.env.VITE_API_BASE_URL || "https://www.wylov.com:8080";
+
+const API_KEY = (import.meta.env.VITE_API_KEY || "").trim();
+const PLATFORM_CONTEXT = (import.meta.env.VITE_PLATFORM_CONTEXT || "WYLOV_CLIENT").trim();
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 const TOKEN_KEY = "equator_token";
@@ -25,23 +22,34 @@ export const tokenStorage = {
 };
 
 // ─── Build common headers ─────────────────────────────────────────────────────
-function buildHeaders(extra = {}) {
+function buildHeaders(extra = {}, options = {}) {
   const headers = {
-    "Content-Type": "application/json",
     Accept: "application/json",
     ...extra,
   };
 
-  if (API_KEY) headers["x-api-key"] = API_KEY;
-  if (PLATFORM_CONTEXT) headers["PlatformContext"] = PLATFORM_CONTEXT;
+  if (!headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (API_KEY) {
+    headers["x-api-key"] = API_KEY;
+  }
+
+  if (PLATFORM_CONTEXT) {
+    headers["PlatformContext"] = PLATFORM_CONTEXT;
+  }
 
   const token = tokenStorage.get();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  if (!options.skipAuth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   return headers;
 }
 
-// ─── Error class ─────────────────────────────────────────────────────────────
+// ─── Error class ──────────────────────────────────────────────────────────────
 export class ApiError extends Error {
   constructor(status, message, data = null) {
     super(message);
@@ -51,36 +59,78 @@ export class ApiError extends Error {
   }
 }
 
+// ─── Response parser ──────────────────────────────────────────────────────────
+async function parseResponseBody(response) {
+  if (response.status === 204) {
+    return null;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
 // ─── Response handler ─────────────────────────────────────────────────────────
 async function handleResponse(response) {
-  // 204 No Content — return null
-  if (response.status === 204) return null;
+  const data = await parseResponseBody(response);
+ console.log(
+  "[HTTP ERROR RESPONSE]",
+  JSON.stringify(
+    {
+      status: response.status,
+      url: response.url,
+      message: data?.message,
+      correlationId: data?.correlationId,
+      content: data?.content,
+      raw: data,
+    },
+    null,
+    2
+  )
+);
 
-  // Try to parse JSON regardless of status
-  let data = null;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json") || contentType.includes("*/*")) {
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
-  } else {
-    // For non-JSON responses (blobs, plain text) return raw response
-    return response;
-  }
+window.__LAST_API_ERROR__ = data;
 
   if (!response.ok) {
     const message =
-      data?.message ??
-      data?.error ??
-      data?.title ??
-      `HTTP ${response.status}`;
+      typeof data === "string" && data.trim()
+        ? data
+        : data?.message ||
+          data?.error ||
+          data?.title ||
+          data?.detail ||
+          `HTTP ${response.status}`;
 
-    // Token expired or invalid — caller should handle logout
     if (response.status === 401) {
-      tokenStorage.remove();
-      throw new ApiError(401, "Session expirée. Veuillez vous reconnecter.", data);
+      const hasToken = Boolean(tokenStorage.get());
+
+      if (hasToken) {
+        tokenStorage.remove();
+
+        throw new ApiError(
+          401,
+          "Session expirée. Veuillez vous reconnecter.",
+          data
+        );
+      }
+
+      throw new ApiError(
+        401,
+        "Requête non autorisée. Vérifiez VITE_API_KEY et VITE_PLATFORM_CONTEXT.",
+        data
+      );
     }
 
     if (response.status === 403) {
@@ -97,13 +147,22 @@ async function handleResponse(response) {
   return data;
 }
 
-// ─── Core request function ────────────────────────────────────────────────────
-async function request(method, path, { body, headers: extraHeaders, signal } = {}) {
+// ─── Core JSON request function ───────────────────────────────────────────────
+async function request(
+  method,
+  path,
+  {
+    body,
+    headers: extraHeaders,
+    signal,
+    skipAuth = false,
+  } = {}
+) {
   const url = `${BASE_URL}${path}`;
 
   const options = {
     method,
-    headers: buildHeaders(extraHeaders),
+    headers: buildHeaders(extraHeaders, { skipAuth }),
     signal,
   };
 
@@ -112,23 +171,36 @@ async function request(method, path, { body, headers: extraHeaders, signal } = {
   }
 
   try {
+    console.log("[HTTP REQUEST DEBUG]", {
+  method,
+  path,
+  hasApiKey: Boolean(options.headers["x-api-key"]),
+  apiKeyLength: options.headers["x-api-key"]?.length || 0,
+  platformContext: options.headers["PlatformContext"],
+  hasAuthorization: Boolean(options.headers.Authorization),
+  authorization: options.headers.Authorization ? "PRESENT" : "ABSENT",
+});
     const response = await fetch(url, options);
     return await handleResponse(response);
   } catch (err) {
-    if (err instanceof ApiError) throw err;
-
-    // Network error (no connection, CORS, SSL issue etc.)
-    if (err.name === "TypeError" || err.name === "NetworkError") {
-      throw new ApiError(0, "Impossible de contacter le serveur. Vérifiez votre connexion.", null);
+    if (err instanceof ApiError) {
+      throw err;
     }
 
-    // AbortError (request cancelled)
     if (err.name === "AbortError") {
       throw new ApiError(0, "Requête annulée.", null);
     }
 
-    // Unknown error — rethrow with context
+    if (err.name === "TypeError" || err.name === "NetworkError") {
+      throw new ApiError(
+        0,
+        "Impossible de contacter le serveur. Vérifiez votre connexion.",
+        null
+      );
+    }
+
     console.error("[httpClient] Unexpected error:", err);
+
     throw new ApiError(0, "Une erreur inattendue est survenue.", null);
   }
 }
@@ -137,17 +209,75 @@ async function request(method, path, { body, headers: extraHeaders, signal } = {
 const http = {
   get: (path, options = {}) => request("GET", path, options),
 
-  post: (path, body, options = {}) => request("POST", path, { ...options, body }),
+  post: (path, body, options = {}) =>
+    request("POST", path, { ...options, body }),
 
-  put: (path, body, options = {}) => request("PUT", path, { ...options, body }),
+  put: (path, body, options = {}) =>
+    request("PUT", path, { ...options, body }),
 
   delete: (path, options = {}) => request("DELETE", path, options),
 
-  // Multipart form upload (overrides Content-Type so browser sets boundary)
+  /**
+   * POST qui récupère une réponse binaire.
+   * Utilisé pour les images/assets.
+   * Retourne une URL blob utilisable dans <img src="..." />.
+   */
+  blob: async (path, body, options = {}) => {
+    const url = `${BASE_URL}${path}`;
+
+    const headers = buildHeaders(
+      {
+        Accept: "*/*",
+        ...(options.headers || {}),
+      },
+      {
+        skipAuth: options.skipAuth || false,
+      }
+    );
+
+    const requestOptions = {
+      method: "POST",
+      headers,
+      signal: options.signal,
+    };
+
+    if (body !== undefined) {
+      requestOptions.body = JSON.stringify(body);
+    }
+
+    try {
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        await handleResponse(response);
+      }
+
+      const blob = await response.blob();
+
+      if (!blob || blob.size === 0) {
+        throw new ApiError(0, "Image vide ou invalide.", null);
+      }
+
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+
+      throw new ApiError(0, "Impossible de charger l'image.", null);
+    }
+  },
+
+  /**
+   * Multipart form upload.
+   */
   upload: async (path, formData, options = {}) => {
     const url = `${BASE_URL}${path}`;
-    const headers = buildHeaders(options.headers ?? {});
-    // Remove Content-Type — fetch will set it with the correct boundary for FormData
+
+    const headers = buildHeaders(options.headers || {}, {
+      skipAuth: options.skipAuth || false,
+    });
+
     delete headers["Content-Type"];
 
     try {
@@ -157,9 +287,13 @@ const http = {
         body: formData,
         signal: options.signal,
       });
+
       return await handleResponse(response);
     } catch (err) {
-      if (err instanceof ApiError) throw err;
+      if (err instanceof ApiError) {
+        throw err;
+      }
+
       throw new ApiError(0, "Impossible de contacter le serveur.", null);
     }
   },
@@ -168,50 +302,77 @@ const http = {
 export default http;
 
 // ─── Pagination helper ────────────────────────────────────────────────────────
-/**
- * Build the standard search query body used by most POST search endpoints.
- * @param {object} params
- * @param {number} params.page         — 0-based page index
- * @param {number} params.pageSize     — items per page
- * @param {string} params.searchString — optional text filter
- * @param {string} params.sortBy
- * @param {string} params.sortDirection — ASC | DESC
- * @param {boolean} params.readAll     — skip pagination and return everything
- * @param {object} params.fieldFilters — key/value pairs for field-level filtering
- */
 export function buildSearchQuery({
   page = 0,
   pageSize = 12,
   searchString = "",
-  sortBy = "",
+  sortBy,
   sortDirection = "DESC",
   readAll = false,
   fieldFilters = {},
   definedFilters = [],
+  relatedPropertyToSortBy,
 } = {}) {
-  return {
-    pageIndex: page,
-    startIndex: page * pageSize,
-    numberOfItemsPerPage: pageSize,
-    searchString,
-    sortBy,
-    sortDirection,
-    readAll,
-    fieldFilters,
-    definedFilters,
+  const safePage = Number.isFinite(Number(page)) ? Number(page) : 0;
+  const safePageSize = Number.isFinite(Number(pageSize)) ? Number(pageSize) : 12;
+
+  const query = {
+    pageIndex: safePage,
+    startIndex: safePage * safePageSize,
+    numberOfItemsPerPage: safePageSize,
+    readAll: Boolean(readAll),
   };
+
+  if (searchString && searchString.trim()) {
+    query.searchString = searchString.trim();
+  }
+
+  if (sortBy && String(sortBy).trim()) {
+    query.sortBy = String(sortBy).trim();
+    query.sortDirection = sortDirection || "DESC";
+  }
+
+  if (fieldFilters && Object.keys(fieldFilters).length > 0) {
+    const normalizedFilters = {};
+
+    Object.entries(fieldFilters).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+
+      normalizedFilters[key] = Array.isArray(value)
+        ? value.map(String)
+        : [String(value)];
+    });
+
+    if (Object.keys(normalizedFilters).length > 0) {
+      query.fieldFilters = normalizedFilters;
+    }
+  }
+
+  if (Array.isArray(definedFilters) && definedFilters.length > 0) {
+    query.definedFilters = definedFilters;
+  }
+
+  if (relatedPropertyToSortBy && String(relatedPropertyToSortBy).trim()) {
+    query.relatedPropertyToSortBy = String(relatedPropertyToSortBy).trim();
+  }
+
+  return query;
 }
 
-/**
- * Normalize the paginated response returned by all search endpoints.
- * Returns { items, totalItems, totalPages, page }
- */
-export function normalizePaginatedResponse(response, pageSize = 12) {
-  if (!response) return { items: [], totalItems: 0, totalPages: 0, page: 0 };
+export function normalizePaginatedResponse(response) {
+  if (!response) {
+    return {
+      items: [],
+      totalItems: 0,
+      totalPages: 0,
+      page: 0,
+    };
+  }
+
   return {
-    items: response.summaryDtos ?? [],
-    totalItems: response.totalNumberOfItems ?? 0,
-    totalPages: response.numberOfPages ?? 0,
-    page: response.pageIndex ?? 0,
+    items: response.summaryDtos || [],
+    totalItems: response.totalNumberOfItems || 0,
+    totalPages: response.numberOfPages || 0,
+    page: response.pageIndex || 0,
   };
 }

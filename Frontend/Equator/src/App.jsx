@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ApiProvider } from "./context/ApiContext";
 import { AuthProvider } from "./context/AuthContext";
-import Navbar from "./components/Navbar";
+import { CartProvider } from "./context/CartContext";
+import Navbar from "./components/layout/Navbar";
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
 import HomePage            from "./pages/HomePage";
@@ -39,41 +40,43 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ApiProvider>
-          <Navbar />
-          <Routes>
-            {/* ── Public ── */}
-            <Route path="/"                   element={<HomePage />} />
-            <Route path="/marketplace"        element={<MarketplacePage />} />
-            <Route path="/search"             element={<SearchResultsPage />} />
-            <Route path="/categories"         element={<CategoriesPage />} />
-            <Route path="/categories/:slug"   element={<CategoriesPage />} />
-            <Route path="/stores"             element={<StoresPage />} />
-            <Route path="/stores/:slug"       element={<StoreDetailPage />} />
-            <Route path="/product/:id"        element={<ProductDetailPage />} />
-            <Route path="/deals"              element={<PlaceholderPage title="Deals & Offres" />} />
+          <CartProvider>
+            <Navbar />
+            <Routes>
+              {/* ── Public ── */}
+              <Route path="/"                   element={<HomePage />} />
+              <Route path="/marketplace"        element={<MarketplacePage />} />
+              <Route path="/search"             element={<SearchResultsPage />} />
+              <Route path="/categories"         element={<CategoriesPage />} />
+              <Route path="/categories/:slug"   element={<CategoriesPage />} />
+              <Route path="/stores"             element={<StoresPage />} />
+              <Route path="/stores/:id"         element={<StoreDetailPage />} />
+              <Route path="/product/:id"        element={<ProductDetailPage />} />
+              <Route path="/deals"              element={<PlaceholderPage title="Deals & Offres" />} />
 
-            {/* ── Auth pages ── */}
-            <Route path="/login"              element={<LoginPage />} />
-            <Route path="/register"           element={<RegisterChoicePage />} />
-            <Route path="/register/buyer"     element={<RegisterPage />} />
-            <Route path="/verify-email"       element={<VerifyEmailPage />} />
-            <Route path="/forgot-password"    element={<PlaceholderPage title="Mot de passe oublié" />} />
+              {/* ── Auth pages ── */}
+              <Route path="/login"              element={<LoginPage />} />
+              <Route path="/register"           element={<RegisterChoicePage />} />
+              <Route path="/register/buyer"     element={<RegisterPage />} />
+              <Route path="/verify-email"       element={<VerifyEmailPage />} />
+              <Route path="/forgot-password"    element={<PlaceholderPage title="Mot de passe oublié" />} />
 
-            {/* ── Protected (accessible but shows prompt if not logged in) ── */}
-            <Route path="/cart"               element={<CartPage />} />
-            <Route path="/account"            element={<AccountPage />} />
+              {/* ── Protected (accessible but shows prompt if not logged in) ── */}
+              <Route path="/cart"               element={<CartPage />} />
+              <Route path="/account"            element={<AccountPage />} />
 
-            {/* ── Footer links ── */}
-            <Route path="/about"              element={<PlaceholderPage title="À Propos" />} />
-            <Route path="/sell"               element={<PlaceholderPage title="Vendre sur Equator" />} />
-            <Route path="/careers"            element={<PlaceholderPage title="Carrières" />} />
-            <Route path="/contact"            element={<PlaceholderPage title="Contact" />} />
-            <Route path="/privacy"            element={<PlaceholderPage title="Politique de Confidentialité" />} />
-            <Route path="/terms"              element={<PlaceholderPage title="Conditions d'Utilisation" />} />
+              {/* ── Footer links ── */}
+              <Route path="/about"              element={<PlaceholderPage title="À Propos" />} />
+              <Route path="/sell"               element={<PlaceholderPage title="Vendre sur Equator" />} />
+              <Route path="/careers"            element={<PlaceholderPage title="Carrières" />} />
+              <Route path="/contact"            element={<PlaceholderPage title="Contact" />} />
+              <Route path="/privacy"            element={<PlaceholderPage title="Politique de Confidentialité" />} />
+              <Route path="/terms"              element={<PlaceholderPage title="Conditions d'Utilisation" />} />
 
-            {/* ── 404 ── */}
-            <Route path="*"                   element={<PlaceholderPage title="Page introuvable" />} />
-          </Routes>
+              {/* ── 404 ── */}
+              <Route path="*"                   element={<PlaceholderPage title="Page introuvable" />} />
+            </Routes>
+          </CartProvider>
         </ApiProvider>
       </AuthProvider>
     </BrowserRouter>
