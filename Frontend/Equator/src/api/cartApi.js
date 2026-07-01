@@ -32,17 +32,44 @@ import { mapCartFromApi, mapCartItemFromApi } from "./mappers/mappers";
 // ─── Cart creation & retrieval ────────────────────────────────────────────────
 /**
  * Create a new shopping cart for a customer at a given store.
- * @param {{ customerId: number, customerAccountId?: number, storeId: number, note?: string }} payload
+ * The backend schema uses ShoppingCartDto here and requires cartItems,
+ * customerId and storeId. The response is only EntitySummaryDto, so we
+ * merge the returned id back into the submitted DTO before mapping.
+ * @param {{ customerId: number, customerAccountId?: number, storeId: number, note?: string, cartItems?: Array<object> }} payload
  */
-export async function createCart({ customerId, customerAccountId, storeId, note = "" }) {
-  const response = await http.post("/api/client/shopping-cart/create", {
+export async function createCart({
+  customerId,
+  customerAccountId,
+  storeId,
+  note = "",
+  cartItems = [],
+}) {
+  const cartDto = {
     customerId,
-    customerAccountId,
+    ...(customerAccountId ? { customerAccountId } : {}),
     storeId,
     note,
-    cartItems: [],
-  });
-  return mapCartFromApi(response);
+    cartItems,
+  };
+
+  const createOnPath = async (path) => {
+    const response = await http.post(path, cartDto);
+
+    return mapCartFromApi({
+      ...cartDto,
+      ...response,
+      id: response?.id ?? response?.data?.id ?? cartDto.id,
+    });
+  };
+
+  try {
+    return await createOnPath("/api/client/shopping-cart/create");
+  } catch (err) {
+    if (err?.status !== 404) throw err;
+
+    // Some backend builds expose creation only on the non-client route.
+    return createOnPath("/api/shopping-cart/create");
+  }
 }
 
 /**
@@ -85,10 +112,18 @@ export async function emptyCart(shoppingCartId) {
  * Submit (checkout) the cart — converts it into a purchase/order.
  * @param {object} cartDto — full ShoppingCartDto shape
  */
+/**
+ * Submit (checkout) the cart — converts it into a purchase/order.
+ * @param {object} cartDto — full ShoppingCartDto shape
+ */
 export async function submitCart(cartDto) {
+  console.log(
+    "[SUBMIT CART ENDPOINT]",
+    "POST /api/client/shopping-cart/submit"
+  );
+
   return http.post("/api/client/shopping-cart/submit", cartDto);
 }
-
 // ─── Add product shortcuts (no need to manage cart ID manually) ──────────────
 /**
  * Quick "add to cart" shortcut — backend resolves or creates the cart
@@ -171,8 +206,45 @@ export async function searchCarts(params = {}) {
 export async function searchAllCarts(params = {}) {
   const body = buildSearchQuery({ ...params, readAll: true });
   const response = await http.post("/api/client/shopping-cart/search-all", body);
+
+  if (Array.isArray(response)) {
+    return response.map(mapCartFromApi);
+  }
+
   const normalized = normalizePaginatedResponse(response);
   return normalized.items.map(mapCartFromApi);
+}
+
+
+/**
+ * Search carts for a customer/store pair using ClientShoppingCartSearchQueryDto.
+ * This is used as a fallback when find-by-store-and-customer returns 404.
+ */
+export async function searchCartsByCustomerAndStore({
+  customerId,
+  customerAccountId,
+  storeId,
+  pageSize = 20,
+} = {}) {
+  const fieldFilters = {};
+
+  if (customerId) fieldFilters.CUSTOMER_ID = [String(customerId)];
+  if (customerAccountId) fieldFilters.CUSTOMER_ACCOUNT_ID = [String(customerAccountId)];
+  if (storeId) fieldFilters.STORE_ID = [String(storeId)];
+
+  const definedFilters = Object.keys(fieldFilters);
+  const body = {
+    startIndex: 0,
+    pageIndex: 0,
+    numberOfItemsPerPage: pageSize,
+    readAll: true,
+    ...(definedFilters.length ? { definedFilters, fieldFilters } : {}),
+  };
+
+  const response = await http.post("/api/client/shopping-cart/search-all", body);
+  return Array.isArray(response)
+    ? response.map(mapCartFromApi)
+    : normalizePaginatedResponse(response).items.map(mapCartFromApi);
 }
 
 const cartApi = {
@@ -189,6 +261,7 @@ const cartApi = {
   deleteCartItem,
   searchCarts,
   searchAllCarts,
+  searchCartsByCustomerAndStore,
 };
 
 export default cartApi;

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useApi } from "../../../context/ApiContext";
 import { useAuth } from "../../../context/AuthContext";
 import { useCart } from "../../../hooks/useCart";
+import { useFavorites } from "../../../hooks/useFavorites";
 import { useProducts } from "../../../hooks/useProducts";
 import {
   getProductId,
@@ -18,25 +18,46 @@ export default function useProductDetailPage() {
   const routerLocation = useLocation();
   const productFromNavigation = routerLocation.state?.product || null;
 
-  const { toggleWishlist, isInWishlist } = useApi();
   const { isAuthenticated } = useAuth();
   const { addToCart, loading: cartLoading } = useCart();
 
-  const { products: allProducts, loading, error } = useProducts({ pageSize: 100 });
+  const {
+    isProductFavorite,
+    toggleFavorite,
+    isProductFavoritePending,
+    error: favoriteError,
+  } = useFavorites();
+
+  const {
+    products: allProducts,
+    loading,
+    error,
+  } = useProducts({ pageSize: 100 });
 
   const apiProduct = useMemo(() => {
-    if (productMatchesRoute(productFromNavigation, id)) return productFromNavigation;
+    if (productMatchesRoute(productFromNavigation, id)) {
+      return productFromNavigation;
+    }
+
     return allProducts.find((item) => productMatchesRoute(item, id)) || null;
   }, [productFromNavigation, allProducts, id]);
 
   const product = useMemo(() => normalizeProduct(apiProduct), [apiProduct]);
-  const similar = useMemo(() => getSimilarProducts(allProducts, product), [allProducts, product]);
+
+  const similar = useMemo(
+    () => getSimilarProducts(allProducts, product),
+    [allProducts, product]
+  );
+
   const images = useMemo(() => getProductImages(product), [product]);
 
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState(0);
   const [added, setAdded] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
+
+  const productId = product ? getProductId(product) : null;
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
@@ -44,21 +65,63 @@ export default function useProductDetailPage() {
       return;
     }
 
-    if (!product?.id || !product?.storeId) {
+    if (!productId || !product?.storeId) {
       console.warn("[ProductDetailPage] productId ou storeId manquant :", product);
+      setCartMessage("Produit invalide.");
+      setAdded(false);
       return;
     }
 
     try {
-      for (let i = 0; i < qty; i += 1) {
-        await addToCart(product.id, product.storeId);
+      setCartMessage("");
+
+      /**
+       * On n'utilise pas une boucle `for` avec qty.
+       * Le backend refuse l'ajout multiple du même produit et renvoie :
+       * "Le produit est déjà présent dans votre panier."
+       *
+       * Donc on appelle addToCart une seule fois, puis CartContext recharge
+       * le vrai panier avec refreshCart(storeId).
+       */
+      const result = await addToCart(productId, product.storeId, product);
+
+      if (result?.noActiveCart) {
+        setCartMessage(result.message || "Ce point de vente n'a pas de panier actif.");
+        setAdded(false);
+        return;
       }
 
-      setAdded(true);
-      setTimeout(() => setAdded(false), 2000);
+      if (result?.alreadyExists) {
+        setCartMessage("Ce produit est déjà dans votre panier.");
+        setAdded(false);
+        return;
+      }
+
+      if (result?.ok) {
+        setCartMessage("Produit ajouté au panier.");
+        setAdded(true);
+        setTimeout(() => setAdded(false), 2000);
+        return;
+      }
+
+      setCartMessage(result?.message || "Impossible d’ajouter au panier.");
+      setAdded(false);
     } catch (err) {
       console.error("[ProductDetailPage] Erreur ajout panier :", err);
+      setCartMessage("Impossible d’ajouter au panier.");
+      setAdded(false);
     }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!product) return;
+
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    await toggleFavorite(product);
   };
 
   return {
@@ -67,17 +130,27 @@ export default function useProductDetailPage() {
     error,
     images,
     similar,
+
     activeImg,
     setActiveImg,
+
     qty,
     setQty,
+
     activeTab,
     setActiveTab,
+
     added,
+    cartMessage,
     cartLoading,
-    wishlisted: product ? isInWishlist(getProductId(product)) : false,
+
+    wishlisted: product ? isProductFavorite(product) : false,
+    favoritePending: product ? isProductFavoritePending(product) : false,
+    favoriteError,
+
     handleAdd,
-    toggleWishlist: () => product && toggleWishlist(getProductId(product)),
+    toggleWishlist: handleToggleFavorite,
+
     goToMarketplace: () => navigate("/marketplace"),
   };
 }

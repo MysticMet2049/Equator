@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import StarRating from "../../common/StarRating";
 import SearchProductImage from "./SearchProductImage";
+import ProductFavoriteButton from "../../favorites/ProductFavoriteButton";
 import { formatPrice, getProductId, getStoreId } from "./searchUtils";
 
 export default function SearchProductCard({ product, onAddToCart, added }) {
@@ -28,6 +29,16 @@ export default function SearchProductCard({ product, onAddToCart, added }) {
     >
       <div className="relative overflow-hidden" style={{ aspectRatio: "1/1", background: "#f5f0e8" }}>
         <SearchProductImage product={product} />
+
+        <ProductFavoriteButton
+          product={product}
+          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center transition-all"
+          style={{
+            background: "white",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+          }}
+          iconSize={13}
+        />
 
         {product?.badge && (
           <span

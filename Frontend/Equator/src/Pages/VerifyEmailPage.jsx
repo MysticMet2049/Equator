@@ -1,3 +1,4 @@
+// Page Vérification e-mail : gère la saisie du code envoyé à l’utilisateur.
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FiMail } from "react-icons/fi";

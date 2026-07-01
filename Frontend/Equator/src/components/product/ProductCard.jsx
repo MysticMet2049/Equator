@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiShoppingCart, FiHeart } from "react-icons/fi";
+import { FiShoppingCart } from "react-icons/fi";
 import StarRating from "../common/StarRating";
-import { useApi } from "../../context/ApiContext";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../hooks/useCart";
 import ApiImage from "../common/ApiImage";
+import ProductFavoriteButton from "../favorites/ProductFavoriteButton";
 
 function getProductId(product) {
   return product?.productId || product?.id || product?.promoId || null;
@@ -76,7 +76,6 @@ function ProductImage({ product }) {
 }
 
 export default function ProductCard({ product }) {
-  const { toggleWishlist, isInWishlist } = useApi();
   const { addToCart, loading: cartLoading } = useCart();
   const { isAuthenticated } = useAuth();
 
@@ -84,7 +83,6 @@ export default function ProductCard({ product }) {
   const [localError, setLocalError] = useState(null);
 
   const productId = getProductId(product);
-  const wishlisted = productId ? isInWishlist(productId) : false;
 
   const handleNavigate = () => {
     if (!productId) return;
@@ -123,17 +121,9 @@ export default function ProductCard({ product }) {
     }
   };
 
-  const handleWishlist = (event) => {
-    event.stopPropagation();
-
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
-
-    if (productId) {
-      toggleWishlist(productId);
-    }
+  const handleFavoriteError = (error) => {
+    console.error("[ProductCard] Erreur favori :", error);
+    setLocalError(error?.message || "Impossible de mettre à jour les favoris.");
   };
 
   return (
@@ -162,23 +152,16 @@ export default function ProductCard({ product }) {
           </span>
         )}
 
-        <button
-          onClick={handleWishlist}
+        <ProductFavoriteButton
+          product={product}
           className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
           style={{
             background: "white",
             boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
           }}
-          aria-label="Ajouter aux favoris"
-        >
-          <FiHeart
-            size={12}
-            style={{
-              color: wishlisted ? "#dc2626" : "var(--color-equator-muted)",
-              fill: wishlisted ? "#dc2626" : "none",
-            }}
-          />
-        </button>
+          iconSize={12}
+          onError={handleFavoriteError}
+        />
 
         <button
           onClick={handleAddToCart}

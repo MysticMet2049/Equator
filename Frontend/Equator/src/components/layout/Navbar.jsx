@@ -88,7 +88,7 @@ const { cartCount } = useCart();
           {cartCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 text-white w-4 h-4 rounded-full flex items-center justify-center font-medium"
               style={{ background: "var(--color-equator-green)", fontSize: "9px" }}>
-              {cartCount}
+              {cartCount > 99 ? "99+" : cartCount}
             </span>
           )}
         </Link>

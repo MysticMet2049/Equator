@@ -1,4 +1,5 @@
 import StarRating from "../../common/StarRating";
+import ProductRatingForm from "./ProductRatingForm";
 import { PRODUCT_DETAIL_TABS } from "./productDetailUtils";
 
 export default function ProductTabs({ product, activeTab, setActiveTab }) {
@@ -47,7 +48,9 @@ function ReviewsTab({ product, totalReviews }) {
       ];
 
   return (
-    <div className="grid md:grid-cols-2 gap-8">
+    <>
+      <ProductRatingForm product={product} />
+      <div className="grid md:grid-cols-2 gap-8">
       <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid var(--color-equator-beige)" }}>
         <p className="text-5xl font-bold mb-1" style={{ color: "var(--color-equator-text)", fontFamily: "var(--font-body)" }}>
           {product.rating}
@@ -111,7 +114,8 @@ function ReviewsTab({ product, totalReviews }) {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

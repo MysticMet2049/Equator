@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ApiProvider } from "./context/ApiContext";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { FavoritesProvider } from "./context/FavoritesContext";
 import Navbar from "./components/layout/Navbar";
 
 // ── Pages ──────────────────────────────────────────────────────────────────────
@@ -40,8 +41,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ApiProvider>
-          <CartProvider>
-            <Navbar />
+          <FavoritesProvider>
+            <CartProvider>
+              <Navbar />
             <Routes>
               {/* ── Public ── */}
               <Route path="/"                   element={<HomePage />} />
@@ -76,7 +78,8 @@ export default function App() {
               {/* ── 404 ── */}
               <Route path="*"                   element={<PlaceholderPage title="Page introuvable" />} />
             </Routes>
-          </CartProvider>
+            </CartProvider>
+          </FavoritesProvider>
         </ApiProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,3 +1,4 @@
+// Page Inscription : gère le formulaire de création du compte acheteur.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff, FiAlertCircle } from "react-icons/fi";

@@ -1,3 +1,4 @@
+// Page Marketplace : affiche les produits, filtres et contrôles de navigation.
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";

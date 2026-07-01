@@ -8,7 +8,7 @@ export default defineConfig({
     server: {
     proxy: {
       "/api": {
-        target: "https://www.wylov.com:8081",
+        target: "https://www.wylov.com:8080",
         changeOrigin: true,
         secure: false,
       },

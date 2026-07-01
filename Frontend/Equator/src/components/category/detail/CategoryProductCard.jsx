@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { FiHeart, FiShoppingCart } from "react-icons/fi";
+import { FiShoppingCart } from "react-icons/fi";
 import StarRating from "../../common/StarRating";
 import { getProductPrice, getProductRating } from "../categoryUtils";
 import CategoryProductImage from "./CategoryProductImage";
+import ProductFavoriteButton from "../../favorites/ProductFavoriteButton";
 
 export default function CategoryProductCard({ product, onAdd, added }) {
   const price = getProductPrice(product);
@@ -24,24 +25,15 @@ export default function CategoryProductCard({ product, onAdd, added }) {
       >
         <CategoryProductImage product={product} />
 
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-          }}
+        <ProductFavoriteButton
+          product={product}
+          preventDefault
           className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-all"
           style={{
             background: "white",
             boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
           }}
-        >
-          <FiHeart
-            size={13}
-            style={{
-              color: "var(--color-equator-muted)",
-              fill: "none",
-            }}
-          />
-        </button>
+        />
 
         {product.badge && (
           <span

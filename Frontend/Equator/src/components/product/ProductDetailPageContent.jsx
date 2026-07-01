@@ -23,6 +23,7 @@ export default function ProductDetailPage() {
     added,
     cartLoading,
     wishlisted,
+    favoriteError,
     handleAdd,
     toggleWishlist,
     goToMarketplace,
@@ -65,6 +66,7 @@ export default function ProductDetailPage() {
             cartLoading={cartLoading}
             onAdd={handleAdd}
             onToggleWishlist={toggleWishlist}
+            favoriteError={favoriteError}
           />
         </div>
       </div>

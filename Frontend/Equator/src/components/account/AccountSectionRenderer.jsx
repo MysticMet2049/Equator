@@ -3,9 +3,13 @@ import FavoritesSection from "./sections/FavoritesSection";
 import OrdersSection from "./sections/OrdersSection";
 import ProfileSection from "./sections/ProfileSection";
 import StoreAccountsSection from "./sections/StoreAccountsSection";
+import { useFavorites } from "../../hooks/useFavorites";
+import { useAuth } from "../../context/AuthContext";
 
 export default function AccountSectionRenderer({ state }) {
-  const favoriteProducts = state.favoriteProducts.items || [];
+  const { isAuthenticated } = useAuth();
+  const { favoriteProducts: syncedFavoriteProducts } = useFavorites();
+  const favoriteProducts = isAuthenticated ? syncedFavoriteProducts : state.favoriteProducts.items || [];
   const linkedCards = state.linkedCards.items || [];
   const purchases = state.purchases.items || [];
   const debtItems = state.purchasesInDebt.items || [];

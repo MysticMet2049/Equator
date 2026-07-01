@@ -1,3 +1,4 @@
+// Page Choix d’inscription : permet de sélectionner le type de compte à créer.
 import { Link, useNavigate } from "react-router-dom";
 import { FiUser, FiShoppingBag, FiChevronRight } from "react-icons/fi";
 import Footer from "../components/layout/Footer";
